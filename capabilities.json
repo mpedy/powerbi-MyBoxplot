@@ -17,7 +17,7 @@
             "name": "Measure",
             "displayName": "Measure",
             "displayNameKey": "Visual_Values",
-            "kind": "Measure"
+            "kind": "GroupingOrMeasure"
         }
     ],
     "supportsHighlight": true,
@@ -27,11 +27,21 @@
                 "rows": {
                     "for": {
                         "in": "Category"
+                    },
+                    "dataReductionAlgorithm":{
+                        "top": {
+                            "count": 10000
+                        }
                     }
                 },
                 "columns": {
                     "for": {
                         "in": "Column"
+                    },
+                    "dataReductionAlgorithm":{
+                        "top": {
+                            "count": 10000
+                        }
                     }
                 },
                 "values": {
@@ -39,6 +49,11 @@
                         {
                             "for": {
                                 "in": "Measure"
+                            },
+                            "dataReductionAlgorithm":{
+                                "top": {
+                                    "count": 10000
+                                }
                             }
                         }
                     ]
