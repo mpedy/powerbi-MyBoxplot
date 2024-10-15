@@ -5,14 +5,14 @@
         "guid": "myBoxplot541DC33D1A844DEDB11EBDB1C406477F",
         "visualClassName": "Visual",
         "version": "1.0.0.0",
-        "description": "",
-        "supportUrl": "",
-        "gitHubUrl": ""
+        "description": "Boxplot per l'analisi dei QVD",
+        "supportUrl": "https://github.com/mpedy/powerbi-MyBoxplot",
+        "gitHubUrl": "https://github.com/mpedy/powerbi-MyBoxplot"
     },
     "apiVersion": "5.3.0",
     "author": {
-        "name": "",
-        "email": ""
+        "name": "Matteo Provendola",
+        "email": "matteo.provendola@unige.it"
     },
     "assets": {
         "icon": "assets/icon.png"
