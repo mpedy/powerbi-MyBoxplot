@@ -24,7 +24,7 @@
  *  THE SOFTWARE.
  */
 
-"use strict";
+//"use strict";
 
 import { formattingSettings } from "powerbi-visuals-utils-formattingmodel";
 
@@ -36,48 +36,61 @@ import FormattingSettingsModel = formattingSettings.Model;
  * Data Point Formatting Card
  */
 class DataPointCardSettings extends FormattingSettingsCard {
-    defaultColor = new formattingSettings.ColorPicker({
-        name: "defaultColor",
-        displayName: "Default color",
-        value: { value: "" }
+    public showLogo = new formattingSettings.ToggleSwitch({
+        name: "View logo",
+        displayName: "Visualizza il logo",
+        value: true,
+        visible: true
     });
 
-    showAllDataPoints = new formattingSettings.ToggleSwitch({
-        name: "showAllDataPoints",
-        displayName: "Show all",
-        value: true
+    public logoSize = new formattingSettings.NumUpDown({
+        name: "Logo size",
+        displayName: "Larghezza del logo",
+        value: 300,
+        visible: true
     });
 
-    fill = new formattingSettings.ColorPicker({
-        name: "fill",
-        displayName: "Fill",
-        value: { value: "" }
+    public nOfThresholdLines = new formattingSettings.NumUpDown({
+        name: "Number of threshold lines",
+        displayName: "Numero di linee per il threshold",
+        value: 2,
+        visible: true
+    })
+
+    public name: string = "settings";
+    public displayName: string = "Impostazioni di stile";
+    public visible: boolean = true;
+    public slices: FormattingSettingsSlice[] = [this.showLogo, this.logoSize, this.nOfThresholdLines];
+}
+
+class ThresholdOptions extends FormattingSettingsCard{
+    public lineColors = new formattingSettings.ColorPicker({
+        name: "lineColor",
+        displayName: "Colore della linea",
+        value: { value: "#000000" },
+        visible: true
     });
 
-    fillRule = new formattingSettings.ColorPicker({
-        name: "fillRule",
-        displayName: "Color saturation",
-        value: { value: "" }
-    });
+    public lineValues = new formattingSettings.NumUpDown({
+        name: "lineValues",
+        displayName: "Valore della linea",
+        value: 25,
+        visible: true
+    })
 
-    fontSize = new formattingSettings.NumUpDown({
-        name: "fontSize",
-        displayName: "Text Size",
-        value: 12
-    });
-
-    name: string = "dataPoint";
-    displayName: string = "Data colors asdasd";
-    slices: Array<FormattingSettingsSlice> = [this.defaultColor, this.showAllDataPoints, this.fill, this.fillRule, this.fontSize];
+    public name: string = "lineOptions"
+    public displayName: string = "Opzioni linee";
+    public visible: boolean = true;
+    public slices: FormattingSettingsSlice[] =  [ this.lineColors, this.lineValues];
 }
 
 /**
 * visual settings model class
 *
 */
-export class VisualFormattingSettingsModel extends FormattingSettingsModel {
-    // Create formatting settings model formatting cards
-    dataPointCard = new DataPointCardSettings();
+export class VisualSettings extends FormattingSettingsModel {
 
-    cards = [this.dataPointCard];
+    public circle: DataPointCardSettings = new DataPointCardSettings();
+    public thres : ThresholdOptions = new ThresholdOptions();
+    public cards: FormattingSettingsCard[] = [this.circle, this.thres];
 }
