@@ -1,0 +1,105 @@
+{
+    "privileges": [],
+    "dataRoles": [
+        {
+            "name": "Category",
+            "displayName": "Aree Domande",
+            "displayNameKey": "Visual_Category",
+            "kind": "Grouping"
+        },
+        {
+            "name": "CDS_codes",
+            "displayName": "Codici Insegnamento",
+            "displayNameKey": "Visual_Column",
+            "kind": "Grouping"
+        },
+        {
+            "name": "Values",
+            "displayName": "Valori",
+            "displayNameKey": "Visual_Values",
+            "kind": "GroupingOrMeasure"
+        }
+    ],
+    "supportsHighlight": true,
+    "objects": {
+        "settings": {
+            "properties": {
+                "Logo size": {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "View logo": {
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "Number of threshold lines": {
+                    "type": {
+                        "numeric": true
+                    }
+                }
+            }
+        },
+        "lineOptions": {
+            "displayName": "Line Options",
+            "properties": {
+                "lineColor": {
+                    "displayName": "Line Color",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "lineValues": {
+                    "displayName": "Line Values",
+                    "type": {
+                        "numeric": true
+                    }
+                }
+            }
+        }
+    },
+    "dataViewMappings": [
+        {
+            "categorical": {
+                "categories": {
+                    "for": {
+                        "in": "Category"
+                    },
+                    "dataReductionAlgorithm": {
+                        "top": {
+                            "count": 100
+                        }
+                    }
+                },
+                "values": {
+                    "group": {
+                        "by": "CDS_codes",
+                        "dataReductionAlgorithm": {
+                            "top": {
+                                "count": 30000
+                            }
+                        },
+                        "select": [
+                            {
+                                "for": {
+                                    "in": "Values"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ],
+    "tooltips": {
+        "supportedTypes": {
+            "default": true,
+            "canvas": true
+        }
+    }
+}
