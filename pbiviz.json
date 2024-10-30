@@ -4,7 +4,7 @@
         "displayName": "MyBoxplot",
         "guid": "myBoxplot541DC33D1A844DEDB11EBDB1C406477F",
         "visualClassName": "Visual",
-        "version": "1.0.0.0",
+        "version": "1.0.0.5",
         "description": "Boxplot per l'analisi dei QVD",
         "supportUrl": "https://github.com/mpedy/powerbi-MyBoxplot",
         "gitHubUrl": "https://github.com/mpedy/powerbi-MyBoxplot"

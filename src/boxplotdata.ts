@@ -15,10 +15,11 @@ export interface BoxPlotData {
     values: number[];
     outliers_inf: number[];
     outliers_sup: number[];
-    selectionId?: ISelectionId
+    selectionId?: ISelectionId,
+    color?: string;
 }
 
-export function calculateBoxPlotData(values: number[], area: string, selectionId?: ISelectionId): BoxPlotData {
+export function calculateBoxPlotData(values: number[], area: string, selectionId?: ISelectionId, color?: string): BoxPlotData {
     const min = percentile(values, 0.00);
     const q1 = percentile(values, 0.25);
     const median = percentile(values, 0.50);
@@ -52,7 +53,8 @@ export function calculateBoxPlotData(values: number[], area: string, selectionId
         values,
         outliers_inf,
         outliers_sup,
-        selectionId
+        selectionId,
+        color: color
     };
 }
 export var percentile = (arr, val) => d3.quantile(arr, val);

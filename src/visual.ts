@@ -27,26 +27,22 @@
 
 import "./../style/visual.less";
 import powerbi from "powerbi-visuals-api";
-//import { createTooltipServiceWrapper, ITooltipServiceWrapper } from "powerbi-visuals-utils-tooltiputils";
-import { createTooltipServiceWrapper, ITooltipServiceWrapper } from "powerbi-visuals-utils-tooltiputils";
 import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
 import { VisualSettings } from "./settings";
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
 import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
-import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions
-import VisualObjectInstance = powerbi.VisualObjectInstance
-import FormattingGroup = powerbi.visuals.FormattingGroup;
 import FormattingModel = powerbi.visuals.FormattingModel;
-import FormattingCard = powerbi.visuals.FormattingCard;
 import ISelectionManager = powerbi.extensibility.ISelectionManager;
-import Selector = powerbi.data.Selector;
 import { BoxPlotData, calculateBoxPlotData, percentile } from "./boxplotdata"
-import VisualTooltipDataItem = powerbi.extensibility.VisualTooltipDataItem;
 import DataView = powerbi.DataView;
 import IVisualHost = powerbi.extensibility.visual.IVisualHost;
 import * as d3 from "d3";
 import { image } from "./unige_image";
+import { dataViewObjects } from "powerbi-visuals-utils-dataviewutils";
+import DataViewObjectPropertyIdentifier = powerbi.DataViewObjectPropertyIdentifier;
+import Fill = powerbi.Fill;
+import { ThresholdLines } from "./thresholdLines";
 
 type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
 
@@ -54,20 +50,44 @@ export class Visual implements IVisual {
     private host: IVisualHost;
     private root: Selection<HTMLElement>;
     private svg: Selection<SVGElement>;
-    private container: Selection<SVGElement>;
     private width: number;
     private height: number;
-    private margin = { top: 30, right: 100, bottom: 50, left: 30, xAxistop: 15 };
+    private margin = { top: 30, right: 100, bottom: 50 + 120, left: 30, xAxistop: 15 };
     private options: VisualUpdateOptions;
     private selectionManager: ISelectionManager;
-    private tooltipServiceWrapper: ITooltipServiceWrapper;
+    //private tooltipServiceWrapper: ITooltipServiceWrapper;
     private boxPlotData: BoxPlotData[] = [];
-    private colors = ["#008fd3", "#99d101", "#f39b02", "#9fcfec", "#4ba707", "#f6d133", "#cb4d2c", "#cac7ba", "#0d869c", "#cdd72e", "#247230", "#6cdedc"];
+    private boxPlotData_dip: BoxPlotData[] = [];
+    private boxPlotData_cds: BoxPlotData[] = [];
+    private questionariBianchi: number = 0;
+    private questionariCompilati: number = 0;
+    private colors = {
+        "CONOSCENZE": "#008fd3",
+        "CARICO DI STUDIO": "#99d101",
+        "MATERIALE DIDATTICO": "#f39b02",
+        "MOD ESAME": "#9fcfec",
+        "SODDISFAZIONE": "#4ba707",
+        "ORARI": "#f6d133",
+        "DOC STIMOLA": "#cb4d2c",
+        "DOC ESPONE": "#cac7ba",
+        "ATT. INTEGRATIVE": "#0d869c",
+        "COERENZA": "#cdd72e",
+        "DOC REPERIBILE": "#247230",
+        "INTERESSE": "#6cdedc"
+    }
     private asseX: d3.ScaleBand<string>;
     private asseY: d3.ScaleLinear<number, number, never>;
-    private numberOfIns: powerbi.PrimitiveValue[];
     private visualSettings: VisualSettings;
     private formattingSettingsService: FormattingSettingsService;
+    private thresholdLines: ThresholdLines[] = [];
+    private buttonContainer: d3.Selection<HTMLDivElement, any, any, any>;
+    private btn_solo_cds: d3.Selection<HTMLButtonElement, any, any, any>;
+    private btn_solo_dip: d3.Selection<HTMLButtonElement, any, any, any>;
+    private btn_all: d3.Selection<HTMLButtonElement, any, any, any>;
+    private filter_all: boolean = true;
+    private filter_dip: boolean = false;
+    private filter_cds: boolean = false;
+    private numberOfIns: number = 0;
 
     constructor(options: VisualConstructorOptions) {
         this.host = options.host;
@@ -75,14 +95,157 @@ export class Visual implements IVisual {
         console.log("Visual build options", options)
         console.log("Salvato", this.options)
         this.root = d3.select(options.element);
-        this.svg = d3.select(options.element).append('svg')
+        let style = document.createElement("style");
+        style.type = "text/css";
+        style.innerHTML = `
+            @font-face {
+                font-family: 'Fira Sans';
+                src: url('./style/fonts/Fira_Sans/FiraSans-Regular.ttf') format('truetype');
+                font-weight: normal;
+                font-style: normal;
+            }
+            .custom-font {
+                font-family: 'Fira Sans', sans-serif;
+            }
+        `;
+        this.root.append("style").text(`
+            @font-face {
+                font-family: 'Fira Sans';
+                src: url('./style/fonts/Fira_Sans/FiraSans-Regular.ttf') format('truetype');
+                font-weight: normal;
+                font-style: normal;
+            }
+            .custom-font {
+                font-family: 'Fira Sans', sans-serif;
+            }
+        `);
+        this.buttonContainer = this.root.append("div");
+        this.svg = d3.select(options.element).append('svg');
         this.selectionManager = this.host.createSelectionManager();
         this.handleContextMenu();
-        this.tooltipServiceWrapper = createTooltipServiceWrapper(this.host.tooltipService, options.element);
+        //this.tooltipServiceWrapper = createTooltipServiceWrapper(this.host.tooltipService, options.element);
+    }
+
+    public createTextbox() {
+        let div = this.buttonContainer
+            .append("div")
+            .style("display", "flex")
+            .style("flex-direction", "row")
+        div.append("div")
+            .style("flex-grow", 1)
+            .style("justify-content", "center")
+            .style("align-items", "center")
+            .style("display", "flex")
+            .style("flex-direction", "column")
+            .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.numberOfIns}</h1>Numero insegnamenti valutati</span>`)
+        div.append("div")
+            .style("flex-grow", 1)
+            .style("justify-content", "center")
+            .style("align-items", "center")
+            .style("display", "flex")
+            .style("flex-direction", "column")
+            .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.questionariCompilati}</h1>Questionari compilati</span>`)
+        div.append("div")
+            .style("flex-grow", 1)
+            .style("justify-content", "center")
+            .style("align-items", "center")
+            .style("display", "flex")
+            .style("flex-direction", "column")
+            .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.questionariBianchi}</h1>Questionari bianchi</span>`)
+    }
+
+    private createButtons() {
+        const min_dist = 5;
+        this.buttonContainer.selectAll("*").remove();
+        let div = this.buttonContainer
+            .append("div")
+            .style("margin-left", "40px")
+        this.btn_all = div
+            .append("button")
+            .attr("clicked", this.filter_all)
+            .attr("id", "btn_tutti")
+            .text("Tutto")
+            .style("position", "relative")
+            .style("padding", "4px 10px")
+            //.style("left","40px")
+            .on("click", event => {
+                var elem = document.getElementById("btn_tutti");
+                if (elem.getAttribute("clicked") == "false") {
+                    elem.setAttribute("clicked", "true")
+                    console.log("Solo filter_all a true")
+                    this.filter_all = true
+                    this.filter_cds = false
+                    this.filter_dip = false
+                } else {
+                    elem.setAttribute("clicked", "false")
+                    this.filter_all = false
+                    console.log("Solo filter_all a false")
+                }
+                this.update(this.options)
+            })
+        let offsets_all = document.getElementById("btn_tutti").getClientRects()[0];
+        this.btn_solo_cds = div
+            .append("button")
+            .attr("clicked", this.filter_cds)
+            .attr("id", "btn_solo_cds")
+            .text("Filtro privacy su CDS")
+            .style("position", "relative")
+            .style("padding", "4px 10px")
+            .style("left", min_dist + "px")
+            .on("click", event => {
+                var elem = document.getElementById("btn_solo_cds");
+                if (elem.getAttribute("clicked") == "false") {
+                    elem.setAttribute("clicked", "true")
+                    console.log("solo filter_cds a true")
+                    this.filter_all = false
+                    this.filter_cds = true
+                    this.filter_dip = false
+                } else {
+                    elem.setAttribute("clicked", "false")
+                    this.filter_cds = false
+                    console.log("solo filter_cds a false")
+                }
+                this.update(this.options)
+            })
+        let offsets_cds = document.getElementById("btn_solo_cds").getClientRects()[0];
+        this.btn_solo_dip = div
+            .append("button")
+            .attr("clicked", this.filter_dip)
+            .attr("id", "btn_solo_dip")
+            .text("Filtro privacy su DIP")
+            .style("background-color", this.filter_dip ? "darkgray" : "")
+            .style("position", "relative")
+            .style("padding", "4px 10px")
+            .style("left", min_dist * 2 + "px")
+            .on("click", event => {
+                var elem = document.getElementById("btn_solo_dip");
+                if (elem.getAttribute("clicked") == "false") {
+                    elem.setAttribute("clicked", "true")
+                    console.log("solo filter_dip a true")
+                    this.filter_all = false
+                    this.filter_cds = false
+                    this.filter_dip = true
+                } else {
+                    elem.setAttribute("clicked", "false")
+                    this.filter_dip = false
+                    console.log("solo filter_dip a false")
+                }
+                this.update(this.options)
+            })
+        if (this.filter_all) {
+            this.btn_all.style("background-color", "#199BFC").style("color", "white").style("font-weight", "bold")
+        }
+        if (this.filter_cds) {
+            this.btn_solo_cds.style("background-color", "#199BFC").style("color", "white").style("font-weight", "bold")
+        }
+        if (this.filter_dip) {
+            this.btn_solo_dip.style("background-color", "#199BFC").style("color", "white").style("font-weight", "bold")
+        }
     }
 
     private handleContextMenu() {
         this.svg.on('contextmenu', (event: PointerEvent, dataPoint) => {
+            console.log("ciao")
             this.selectionManager.showContextMenu(dataPoint ? dataPoint : {}, {
                 x: event.clientX,
                 y: event.clientY
@@ -91,28 +254,15 @@ export class Visual implements IVisual {
         });
     }
 
-    public calculations(dataView: DataView) {
-        var result = ""
-        for (var area of dataView.matrix.rows.root.children) {
-            result += area.value + " : ";
-            result += "\nMin=" + parseFloat("" + percentile(Object.values(area.values).map(a => a.value), 0)).toFixed(2);
-            result += "\nperc5=" + parseFloat("" + percentile(Object.values(area.values).map(a => a.value), 0.05)).toFixed(2);
-            result += "\nQ1=" + parseFloat("" + percentile(Object.values(area.values).map(a => a.value), 0.25)).toFixed(2);
-            result += "\nMediana=" + parseFloat("" + percentile(Object.values(area.values).map(a => a.value), 0.50)).toFixed(2);
-            result += "\nQ3=" + parseFloat("" + percentile(Object.values(area.values).map(a => a.value), 0.75)).toFixed(2);
-            result += "\nPerc95=" + parseFloat("" + percentile(Object.values(area.values).map(a => a.value), 0.95)).toFixed(2);
-            result += "\nMax=" + parseFloat("" + percentile(Object.values(area.values).map(a => a.value), 1)).toFixed(2);
-        }
-        return result;
-    }
-
-    public getTextWidth(text, font) {
+    public getTextWidth(text: string, font?: any) {
         // Crea un elemento span temporaneo
         const span = document.createElement("span");
         span.style.visibility = "hidden";
         span.style.position = "absolute";
         span.style.whiteSpace = "nowrap"; // Impedisce il testo a capo
-        //span.style.font = font; // Imposta lo stile del font come l'elemento originale
+        if (font !== undefined) {
+            span.style.font = font; // Imposta lo stile del font come l'elemento originale
+        }
         span.innerText = text;
 
         // Aggiungi lo span al documento per misurarne la larghezza
@@ -158,47 +308,69 @@ export class Visual implements IVisual {
         }
     }
 
-    public getDataFromDataview(dataView: DataView, options: VisualUpdateOptions) {
-        //debugger;
+    public getDataFromDataview(dataView: DataView) {
         this.boxPlotData = [];
+        this.boxPlotData_dip = [];
+        this.boxPlotData_cds = [];
+        this.questionariBianchi = 0;
+        this.questionariCompilati = 0;
+        let flag_quest_bianchi = false, flag_quest_compilati = false;
         const areas = dataView.categorical.categories[0].values
         var indexArea = 0;
         for (var indexArea = 0; indexArea < areas.length; indexArea++) {
             const area = <string>areas[indexArea];
-            const values = <number[]>dataView.categorical.values.map(child => <number>child.values[indexArea] * 100);
+            let color = this.getColorFromObject(area, dataView, indexArea);
             const categorySelectionId = this.host.createSelectionIdBuilder()
                 .withCategory(dataView.categorical.categories[0], indexArea) // Una sola categoria ("Area Domanda")
                 .createSelectionId();
-            let data = calculateBoxPlotData(values, area, categorySelectionId);
-            this.boxPlotData.push(data);
+            let datas = dataView.categorical.values.grouped();
+            if (datas.length > 1) {
+                if (datas[0].values.length > 1 && !flag_quest_bianchi) {
+                    this.questionariBianchi = <number>datas.map(data => data.values[1]).map(data => data.values[0])[0]
+                    flag_quest_bianchi = true
+                }
+                if (datas[0].values.length > 2 && !flag_quest_compilati) {
+                    this.questionariCompilati = <number>datas.map(data => data.values[2]).map(data => data.values[0])[0]
+                    flag_quest_compilati = true
+                }
+            }
+            let datas1 = dataView.categorical.values.filter(i => i.source.queryName.indexOf("giudizi positivi") >= 0)
+            const values_all = <number[]>datas1.map(child => <number>child.values[indexArea] * 100);
+            const data_all = calculateBoxPlotData(values_all, area, categorySelectionId, color);
+            this.boxPlotData.push(data_all);
+            const values_dip = <number[]>datas1.filter(child => (<string>child.source.groupName).split("_")[0] == "SI").map(child => <number>child.values[indexArea] * 100);
+            const data_dip = calculateBoxPlotData(values_dip, area, categorySelectionId, color);
+            this.boxPlotData_dip.push(data_dip)
+            const values_cds = <number[]>datas1.filter(child => (<string>child.source.groupName).split("_")[1] == "SI").map(child => <number>child.values[indexArea] * 100);
+            const data_cds = calculateBoxPlotData(values_cds, area, categorySelectionId, color);
+            this.boxPlotData_cds.push(data_cds)
         }
     }
 
-    // Definisci le proprietà di formattazione visualizzabili
-    public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstance[] {
-        const instances: VisualObjectInstance[] = [];
-        debugger;
-        if (options.objectName === "lineOptions") {
-            this.boxPlotData.forEach(d => {
-                let selector: Selector = d.selectionId.getSelector()
-                instances.push({
-                    displayName: d.area,
-                    objectName: options.objectName,
-                    selector: null,
-                    properties: {
-                        fill: { solid: { color: "#000000" } }
-                    },
-                });
-            });
+    public getColorFromObject(area: string, dataView: powerbi.DataView, indexArea: number) {
+        const defaultColor: Fill = {
+            solid: {
+                color: this.colors[area],
+            }
+        };
+        const prop: DataViewObjectPropertyIdentifier = {
+            objectName: "colorSelector",
+            propertyName: "fill"
+        };
+
+        let colorFromObjects: Fill;
+        if (dataView.categorical.categories[0].objects?.[indexArea]) {
+            colorFromObjects = dataViewObjects.getValue(dataView.categorical.categories[0]?.objects[indexArea], prop);
         }
 
-        return instances;
+        let color = colorFromObjects?.solid.color ?? defaultColor.solid.color;
+        return color;
     }
 
-    public creaAssi() {
+    public creaAssi(data: BoxPlotData[]) {
         // Scala degli assi
         this.asseX = d3.scaleBand()
-            .domain(this.boxPlotData.map(d => d.area))
+            .domain(data.map(d => d.area))
             .range([0, this.width])
             .padding(0.2);
 
@@ -213,13 +385,13 @@ export class Visual implements IVisual {
             .attr("height", this.height + this.margin.top + this.margin.bottom)
 
 
-        let gtext = this.svg.append("g")
+        /*let gtext = this.svg.append("g")
             .attr("transform", `translate(${this.asseX.bandwidth() / 2},10)`)
         gtext.append("text")
             .text("NUMERO DI INSEGNAMENTI VALUTATI: " + this.numberOfIns.length)
             .attr("dy", ".35em")
             .style("font-size", "10")
-            .call(this.wrap, this.asseX.bandwidth() * 10)
+            .call(this.wrap, this.asseX.bandwidth() * 10)*/
 
         let g = this.svg
             .append("g")
@@ -254,69 +426,94 @@ export class Visual implements IVisual {
             line.attr(i, attribs[i])
         }
     }
-    public getFormattingModel(): powerbi.visuals.FormattingModel {
-        //let formattingModel: powerbi.visuals.FormattingModel = this.formattingSettingsService.buildFormattingModel(this.visualSettings);
+
+    public getFormattingModel(): FormattingModel {
         return this.formattingSettingsService.buildFormattingModel(this.visualSettings);
-/*
-        const formattingModel: FormattingModel = {
-            cards: []
-        };
-        // Gruppo per numero di linee
-        const lineSettingsGroup: FormattingGroup = {
-            displayName: "Line Settings",
-            slices: [
-                {
-                    displayName: "General Settings",
-                    properties: [
-                        {
-                            name: "numberOfLines",
-                            displayName: "Number of Lines",
-                            value: this.settings.lineSettings.numberOfLines,
-                            type: { integer: { min: 0, max: 4 } }
-                        }
-                    ]
-                }
-            ]
-        };
-        
-        formattingModel.groups.push(lineSettingsGroup);
-        return formattingModel
+    }
 
-    }*/
-
-    public update(options: VisualUpdateOptions) {
-        //debugger;
-        this.options = options
-        this.visualSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualSettings, options.dataViews[0]);
-        console.log("SHO LOGO: ", this.visualSettings.circle.showLogo.value);
-        if (this.visualSettings.circle.showLogo.value == false) {
+    public setMarginAndDims() {
+        if (this.visualSettings.stile.showLogo.value == false) {
             this.margin.right = 0;
         } else {
             this.margin.right = 100;
         }
-        console.log(this.margin.right)
-        this.width = options.viewport.width - this.margin.left - this.margin.right;
-        this.height = options.viewport.height - this.margin.top - this.margin.bottom;
+        this.width = this.options.viewport.width - this.margin.left - this.margin.right;
+        this.height = this.options.viewport.height - this.margin.top - this.margin.bottom;
+    }
+
+    public createThresholdLines(dataView: DataView) {
+        this.thresholdLines = [];
+        for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
+            var tl = new ThresholdLines();
+            const defaultColor: Fill = {
+                solid: {
+                    color: "#000000",
+                }
+            };
+            const prop: DataViewObjectPropertyIdentifier = {
+                objectName: "lineOptions",
+                propertyName: "lineColor"
+            };
+
+            let colorFromObjects: Fill;
+            if (dataView.categorical.categories[0].objects?.[i]) {
+                colorFromObjects = dataViewObjects.getValue(dataView.categorical.categories[0]?.objects[i], prop);
+            }
+            let color = colorFromObjects?.solid.color ?? defaultColor.solid.color;
+            tl.setColor(color);
+            this.thresholdLines.push(tl);
+        }
+    }
+
+    public update(options: VisualUpdateOptions) {
+        //debugger;
+        console.log("PRIMA", this.filter_all, this.filter_cds, this.filter_dip)
+        if (!this.filter_all && !this.filter_cds && !this.filter_dip) {
+            this.filter_all = true;
+        }
+        console.log("DOPO", this.filter_all, this.filter_cds, this.filter_dip)
+        this.btn_all?.attr("clicked", this.filter_all)
+        this.btn_solo_cds?.attr("clicked", this.filter_cds)
+        this.btn_solo_dip?.attr("clicked", this.filter_dip)
+        this.options = options
+        this.visualSettings = this.formattingSettingsService.populateFormattingSettingsModel(VisualSettings, options.dataViews[0]);
+        this.setMarginAndDims();
+
         // Pulisci tutti gli elementi
         this.svg.selectAll("*").remove()
         let dataView: DataView = options.dataViews[0];
 
-        this.getDataFromDataview(dataView, options);
-        this.numberOfIns = dataView.categorical.values.map(child => child.source.groupName)
-        //debugger;
+        this.getDataFromDataview(dataView);
+        this.visualSettings.populateColorSelector(this.boxPlotData);
+        if (this.visualSettings.stile.nOfThresholdLines.value > 0) {
+            this.visualSettings.thres.visible = true;
+            for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
+                this.visualSettings.thres.slices[i * 2].visible = true;
+                this.visualSettings.thres.slices[i * 2 + 1].visible = true;
+            }
+        }
+        var data = this.boxPlotData;
+        if (this.filter_all) {
+            data = this.boxPlotData;
+        } else if (this.filter_cds) {
+            data = this.boxPlotData_cds;
+        } else if (this.filter_dip) {
+            data = this.boxPlotData_dip;
+        }
+        this.numberOfIns = data[0].values.length
+
+        // Crea bottoni di scelta
+        this.createButtons();
+
+        // Crea textbox per questionari
+        this.createTextbox();
 
         // Creazione degli assi
-        this.creaAssi()
-
-        // Threshold line 25% e 50%
-        this.aggiungiThreshold(25, { "stroke": "red", "stroke-dasharray": 4 })
-        this.aggiungiThreshold(50, { "stroke": "#cccc00", "stroke-dasharray": 4 })
-
+        this.creaAssi(data)
 
         // Disegna il boxplot per ciascuna area delle domande
-        var indexColor = 0;
         const activeSelections = this.selectionManager.getSelectionIds();
-        this.boxPlotData.forEach(d => {
+        data.forEach(d => {
             //console.log(d)
             let g1 = this.root.select("#svg-container").append("g");
             g1.attr("class", d.area)
@@ -351,7 +548,6 @@ export class Visual implements IVisual {
             //debugger;
             //if(categorySelectionId.key == this.selectionManager.getSelectionIds()[0].key)
 
-
             // Linea verticale del boxplot (dal lower bound al upper bound)
             g1.append("line")
                 .attr("x1", this.asseX(d.area)! + this.asseX.bandwidth() / 2)
@@ -362,34 +558,33 @@ export class Visual implements IVisual {
 
             // Box dal Q1 al Q3
             g1.append("rect")
-                .attr("x", this.asseX(d.area))
+                .attr("x", this.asseX(d.area) + this.visualSettings.stile.boxSize.value / 2)
                 .attr("y", this.asseY(d.q3))
                 .attr("height", this.asseY(d.q1) - this.asseY(d.q3))
-                .attr("width", this.asseX.bandwidth())
+                .attr("width", this.asseX.bandwidth() - this.visualSettings.stile.boxSize.value)
                 .attr("stroke", "black")
-                .attr("fill", this.colors[indexColor % this.colors.length]);
-            indexColor++;
+                .attr("fill", d.color);
 
             // Linea della mediana
             g1.append("line")
-                .attr("x1", this.asseX(d.area))
-                .attr("x2", this.asseX(d.area)! + this.asseX.bandwidth())
-                .attr("y1", this.asseY(d.median))
-                .attr("y2", this.asseY(d.median))
+                .attr("x1", this.asseX(d.area) + this.visualSettings.stile.boxSize.value / 2)
+                .attr("x2", this.asseX(d.area)! + this.asseX.bandwidth() - this.visualSettings.stile.boxSize.value / 2)
+                .attr("y1", this.asseY(d.median) + this.visualSettings.stile.boxSize.value / 2)
+                .attr("y2", this.asseY(d.median) + this.visualSettings.stile.boxSize.value / 2)
                 .attr("stroke", "black")
                 .attr("stroke-width", 2);
 
             // Linea per i bound (upper_bound e lower_bound)
             g1.append("line")
-                .attr("x1", this.asseX(d.area))
-                .attr("x2", this.asseX(d.area)! + this.asseX.bandwidth())
+                .attr("x1", this.asseX(d.area) + this.visualSettings.stile.boxSize.value / 2)
+                .attr("x2", this.asseX(d.area)! + this.asseX.bandwidth() - this.visualSettings.stile.boxSize.value / 2)
                 .attr("y1", Math.min(d.lower_bound, d.min) == d.lower_bound ? this.asseY(d.min) : this.asseY(d.lower_bound))
                 .attr("y2", Math.min(d.lower_bound, d.min) == d.lower_bound ? this.asseY(d.min) : this.asseY(d.lower_bound))
                 .attr("stroke", "black");
 
             g1.append("line")
-                .attr("x1", this.asseX(d.area))
-                .attr("x2", this.asseX(d.area)! + this.asseX.bandwidth())
+                .attr("x1", this.asseX(d.area) + this.visualSettings.stile.boxSize.value / 2)
+                .attr("x2", this.asseX(d.area)! + this.asseX.bandwidth() - this.visualSettings.stile.boxSize.value / 2)
                 .attr("y1", Math.max(d.upper_bound, d.max) == d.upper_bound ? this.asseY(d.max) : this.asseY(d.upper_bound))
                 .attr("y2", Math.max(d.upper_bound, d.max) == d.upper_bound ? this.asseY(d.max) : this.asseY(d.upper_bound))
                 .attr("stroke", "black");
@@ -401,7 +596,7 @@ export class Visual implements IVisual {
                         .style("fill", "white")
                         .style("fill-opacity", "0.5")
                         .style("stroke", "black")
-                        .attr("r", 3)
+                        .attr("r", this.visualSettings.stile.outliersRadius.value)
                         .attr("cx", this.asseX(d.area)! + this.asseX.bandwidth() / 2)
                         .attr("cy", this.asseY(val))
                 }
@@ -427,31 +622,28 @@ export class Visual implements IVisual {
                             }
                         }
                     })
-                    /*this.tooltipServiceWrapper.addTooltip(
-                        g1,
-                        (dataPoint: BoxPlotData) => <VisualTooltipDataItem[]>[
-                            {displayName: "AREA",value: d.area},
-                            {displayName: "Q1",value: d.q1.toFixed(4) + " %"},
-                            {displayName: "Q3",value: d.q3.toFixed(4) + " %"},
-                            {displayName: "Media",value: d.median.toFixed(4) + " %"},
-                            {displayName: "Lower Bound", value: d.lower_bound.toFixed(4) + " %"},
-                            {displayName: "Upper Bound", value: d.upper_bound.toFixed(4) + " %"}
-                        ],
-                        (dataPoint: BoxPlotData) => d.selectionId
-                    );*/
                 }
             } else {
                 this.root.select("#tooltip").remove()
             }
         });
-        if (this.visualSettings.circle.showLogo.value == true) {
+
+        // Threshold line 25% e 50%
+        //this.aggiungiThreshold(25, { "stroke": "red", "stroke-dasharray": 4 })
+        //this.aggiungiThreshold(50, { "stroke": "#cccc00", "stroke-dasharray": 4 })
+        for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
+            this.aggiungiThreshold(this.visualSettings.thres.getValue(i + 1), { "stroke": this.visualSettings.thres.getColor(i + 1).value, "stroke-dasharray": 4 });
+        }
+
+
+        if (this.visualSettings.stile.showLogo.value == true) {
             this.svg
                 .append("image")
                 .attr("xlink:href", "data:image/png;base64," + image)
                 .attr("x", this.width - 70)  // Posizione X dell'immagine
                 .attr("y", 0)  // Posizione Y dell'immagine
-                .attr("width", this.visualSettings.circle.logoSize.value ? this.visualSettings.circle.logoSize.value : 300)  // Larghezza dell'immagine
-                .attr("height", this.visualSettings.circle.logoSize.value ? this.visualSettings.circle.logoSize.value / 4 : 75);  // Altezza dell'immagine
+                .attr("width", this.visualSettings.stile.logoSize.value ? this.visualSettings.stile.logoSize.value : 300)  // Larghezza dell'immagine
+                .attr("height", this.visualSettings.stile.logoSize.value ? this.visualSettings.stile.logoSize.value / 4 : 75);  // Altezza dell'immagine
         }
     }
 

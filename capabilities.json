@@ -3,27 +3,47 @@
     "dataRoles": [
         {
             "name": "Category",
-            "displayName": "Aree Domande",
+            "displayName": "Aree domande",
             "displayNameKey": "Visual_Category",
             "kind": "Grouping"
         },
         {
             "name": "CDS_codes",
-            "displayName": "Codici Insegnamento",
+            "displayName": "Codici Insegnamento con frazionamento e filtro privacy",
             "displayNameKey": "Visual_Column",
             "kind": "Grouping"
         },
         {
             "name": "Values",
-            "displayName": "Valori",
+            "displayName": "Giudizi positivi",
             "displayNameKey": "Visual_Values",
             "kind": "GroupingOrMeasure"
+        },
+        {
+            "name": "Questionari bianchi",
+            "displayName": "Questionari in bianco",
+            "kind": "Measure"
+        },
+        {
+            "name": "Questionari compilati",
+            "displayName": "Questionari compilati",
+            "kind": "Measure"
         }
     ],
     "supportsHighlight": true,
     "objects": {
-        "settings": {
+        "stile": {
             "properties": {
+                "Box size": {
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "Outliers radius": {
+                    "type": {
+                        "numeric": true
+                    }
+                },
                 "Logo size": {
                     "type": {
                         "numeric": true
@@ -41,10 +61,23 @@
                 }
             }
         },
+        "colorSelector": {
+            "properties": {
+                "fill": {
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "lineOptions": {
             "displayName": "Line Options",
             "properties": {
-                "lineColor": {
+                "lineColor1": {
                     "displayName": "Line Color",
                     "type": {
                         "fill": {
@@ -54,8 +87,56 @@
                         }
                     }
                 },
-                "lineValues": {
-                    "displayName": "Line Values",
+                "lineValue1": {
+                    "displayName": "Line Value",
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "lineColor2": {
+                    "displayName": "Line Color",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "lineValue2": {
+                    "displayName": "Line Value",
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "lineColor3": {
+                    "displayName": "Line Color",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "lineValue3": {
+                    "displayName": "Line Value",
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "lineColor4": {
+                    "displayName": "Line Color",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "lineValue4": {
+                    "displayName": "Line Value",
                     "type": {
                         "numeric": true
                     }
@@ -89,6 +170,12 @@
                                 "for": {
                                     "in": "Values"
                                 }
+                            },
+                            {
+                                "for": {"in": "Questionari bianchi"}
+                            },
+                            {
+                                "for": {"in": "Questionari compilati"}
                             }
                         ]
                     }
