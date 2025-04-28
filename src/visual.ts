@@ -59,7 +59,7 @@ export class Visual implements IVisual {
     private boxPlotData: BoxPlotData[] = [];
     private boxPlotData_dip: BoxPlotData[] = [];
     private boxPlotData_cds: BoxPlotData[] = [];
-    private questionariBianchi: number = 0;
+    //private questionariBianchi: number = 0;
     private questionariCompilati: number = 0;
     private colors = {
         "CONOSCENZE": "#008fd3",
@@ -145,13 +145,13 @@ export class Visual implements IVisual {
             .style("display", "flex")
             .style("flex-direction", "column")
             .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.questionariCompilati}</h1>Questionari compilati</span>`)
-        div.append("div")
+        /*div.append("div")
             .style("flex-grow", 1)
             .style("justify-content", "center")
             .style("align-items", "center")
             .style("display", "flex")
             .style("flex-direction", "column")
-            .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.questionariBianchi}</h1>Questionari bianchi</span>`)
+            .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.questionariBianchi}</h1>Questionari bianchi</span>`)*/
     }
 
     private createButtons() {
@@ -167,6 +167,7 @@ export class Visual implements IVisual {
             .text("Tutto")
             .style("position", "relative")
             .style("padding", "4px 10px")
+            .style("display","none")
             //.style("left","40px")
             .on("click", event => {
                 var elem = document.getElementById("btn_tutti");
@@ -192,6 +193,7 @@ export class Visual implements IVisual {
             .style("position", "relative")
             .style("padding", "4px 10px")
             .style("left", min_dist + "px")
+            .style("display","none")
             .on("click", event => {
                 var elem = document.getElementById("btn_solo_cds");
                 if (elem.getAttribute("clicked") == "false") {
@@ -217,6 +219,7 @@ export class Visual implements IVisual {
             .style("position", "relative")
             .style("padding", "4px 10px")
             .style("left", min_dist * 2 + "px")
+            .style("display","none")
             .on("click", event => {
                 var elem = document.getElementById("btn_solo_dip");
                 if (elem.getAttribute("clicked") == "false") {
@@ -312,7 +315,7 @@ export class Visual implements IVisual {
         this.boxPlotData = [];
         this.boxPlotData_dip = [];
         this.boxPlotData_cds = [];
-        this.questionariBianchi = 0;
+        //this.questionariBianchi = 0;
         this.questionariCompilati = 0;
         let flag_quest_bianchi = false, flag_quest_compilati = false;
         const areas = dataView.categorical.categories[0].values
@@ -326,7 +329,7 @@ export class Visual implements IVisual {
             let datas = dataView.categorical.values.grouped();
             if (datas.length > 1) {
                 if (datas[0].values.length > 1 && !flag_quest_bianchi) {
-                    this.questionariBianchi = <number>datas.map(data => data.values[1]).map(data => data.values[0])[0]
+                    //this.questionariBianchi = <number>datas.map(data => data.values[1]).map(data => data.values[0])[0]
                     flag_quest_bianchi = true
                 }
                 if (datas[0].values.length > 2 && !flag_quest_compilati) {
@@ -400,6 +403,7 @@ export class Visual implements IVisual {
 
         // Aggiungi asse X
         g.append("g")
+            .attr("id","asseX")
             .attr("transform", `translate(0,${this.height + this.margin.xAxistop})`)
             .call(d3.axisBottom(this.asseX))
             .selectAll("line").remove();
@@ -410,9 +414,18 @@ export class Visual implements IVisual {
 
         // Aggiungi asse Y
         g.append("g")
+            .attr("id","asseY")
             .call(d3.axisLeft(this.asseY))
-            .selectAll("line").remove();
-        g.selectAll("path").remove();
+            //.selectAll("line").remove();
+            .selectAll(".tick line").remove()
+        //g.selectAll("path").remove();
+        g.append("line")
+            .attr("x1", 0)
+            .attr("x2", this.width) // larghezza totale
+            .attr("y1", this.asseY(0)) // y=0 trasformato in coordinate SVG
+            .attr("y2", this.asseY(0))
+            .attr("stroke", "black")
+            .attr("stroke-width", 1);
     }
 
     public aggiungiThreshold(percentage, attribs) {
