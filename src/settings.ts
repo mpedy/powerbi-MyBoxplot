@@ -30,6 +30,7 @@ import { formattingSettings } from "powerbi-visuals-utils-formattingmodel";
 import powerbiVisualsApi from "powerbi-visuals-api";
 
 import Card = formattingSettings.SimpleCard;
+import GroupCard = formattingSettings.CompositeCard;
 import Slice = formattingSettings.Slice;
 import Model = formattingSettings.Model;
 import { BoxPlotData } from "./boxplotdata";
@@ -104,20 +105,62 @@ class ImpostazioniDiStile extends Card {
         visible: true
     })
 
+    public show_buttons = new formattingSettings.ToggleSwitch({
+        name: "Show buttons",
+        displayName: "Visualizza filtri pulsanti",
+        value: false,
+        visible: true
+    });
+
+    public show_questionari_bianchi = new formattingSettings.ToggleSwitch({
+        name: "Visualizza questionari bianchi",
+        displayName: "Visualizza questionari bianchi",
+        value: false,
+        visible: true
+    });
+
     public name: string = "stile";
     public displayName: string = "Impostazioni di stile";
     public visible: boolean = true;
-    public slices: Slice[] = [this.boxSize, this.outliersRadius, this.showLogo, this.logoSize, this.nOfThresholdLines];
+    public slices: Slice[] = [this.boxSize, this.outliersRadius, this.showLogo, this.logoSize, this.nOfThresholdLines, this.show_buttons, this.show_questionari_bianchi];
 }
 
 class ColorazioneAree extends Card {
     public name: string = "colorSelector";
     public displayName: string = "Colorazione delle Aree";
     public visible = true;
-    public slices : Slice[] = [];
+    public slices: Slice[] = [];
 }
 
-class OpzioniThreshold extends Card{
+class ThresholdLine extends Card {
+    public visible = true
+    public index: number;
+    public color: formattingSettings.ColorPicker = new formattingSettings.ColorPicker({
+        name: "color",
+        displayName: "Colore della linea",
+        value: { value: "#000000" },
+        visible: false
+    });
+    public value:formattingSettings.NumUpDown = new formattingSettings.NumUpDown({
+        name: "value",
+        displayName: "Valore della linea ",
+        value: 10,
+        visible: false
+    })
+    public text:formattingSettings.TextInput = new formattingSettings.TextInput({
+        name: "text",
+        displayName: "Nome della linea",
+        value: "Linea",
+        placeholder: "Linea",
+        visible: false
+    })
+    public name = "Threshold line";
+    public displayName = "Threshold line";
+    public slices = [this.color, this.value, this.text];
+}
+
+//class OpzioniThreshold extends Card {
+class OpzioniThreshold extends GroupCard {
     public lineColor1 = new formattingSettings.ColorPicker({
         name: "lineColor1",
         displayName: "Colore della linea 1",
@@ -129,6 +172,14 @@ class OpzioniThreshold extends Card{
         name: "lineValue1",
         displayName: "Valore della linea 1",
         value: 25,
+        visible: false
+    })
+
+    public lineText1 = new formattingSettings.TextInput({
+        name: "lineText1",
+        displayName: "Nome della linea 1",
+        value: "Linea 1",
+        placeholder: "Linea 1",
         visible: false
     })
 
@@ -146,6 +197,14 @@ class OpzioniThreshold extends Card{
         visible: false
     })
 
+    public lineText2 = new formattingSettings.TextInput({
+        name: "lineText2",
+        displayName: "Nome della linea 2",
+        value: "Linea 2",
+        placeholder: "Linea 2",
+        visible: false
+    })
+
     public lineColor3 = new formattingSettings.ColorPicker({
         name: "lineColor3",
         displayName: "Colore della linea 3",
@@ -157,6 +216,14 @@ class OpzioniThreshold extends Card{
         name: "lineValue3",
         displayName: "Valore della linea 3",
         value: 25,
+        visible: false
+    })
+
+    public lineText3 = new formattingSettings.TextInput({
+        name: "lineText3",
+        displayName: "Nome della linea 3",
+        value: "Linea 3",
+        placeholder: "Linea 3",
         visible: false
     })
 
@@ -174,26 +241,34 @@ class OpzioniThreshold extends Card{
         visible: false
     })
 
-    public getValue(index: number){
-        if(index==1){
+    public lineText4 = new formattingSettings.TextInput({
+        name: "lineText4",
+        displayName: "Nome della linea 4",
+        value: "Linea 4",
+        placeholder: "Linea 4",
+        visible: false
+    })
+
+    public getValue(index: number) {
+        if (index == 1) {
             return this.lineValue1.value;
-        }else if(index==2){
+        } else if (index == 2) {
             return this.lineValue2.value;
-        }else if(index==3){
+        } else if (index == 3) {
             return this.lineValue3.value;
-        }else if(index==4){
+        } else if (index == 4) {
             return this.lineValue4.value;
         }
     }
 
-    public getColor(index: number){
-        if(index==1){
+    public getColor(index: number) {
+        if (index == 1) {
             return this.lineColor1.value;
-        }else if(index==2){
+        } else if (index == 2) {
             return this.lineColor2.value;
-        }else if(index==3){
+        } else if (index == 3) {
             return this.lineColor3.value;
-        }else if(index==4){
+        } else if (index == 4) {
             return this.lineColor4.value;
         }
     }
@@ -201,7 +276,42 @@ class OpzioniThreshold extends Card{
     public name: string = "lineOptions"
     public displayName: string = "Opzioni linee threshold";
     public visible: boolean = false;
-    public slices: Slice[] =  [ this.lineColor1, this.lineValue1, this.lineColor2, this.lineValue2, this.lineColor3, this.lineValue3, this.lineColor4, this.lineValue4];
+    /*public line1 = new ThresholdLine(1);
+    public line2 = new ThresholdLine(2);
+    public line3 = new ThresholdLine(3);
+    public line4 = new ThresholdLine(4);*/
+    public groups: formattingSettings.Group[] = [];
+    /*public slices: Slice[] = [
+        this.lineColor1, this.lineValue1, this.lineText1,
+        this.lineColor2, this.lineValue2, this.lineText2,
+        this.lineColor3, this.lineValue3, this.lineText3,
+        this.lineColor4, this.lineValue4, this.lineText4
+    ];*/
+
+    public activate_line(i: number) {
+        switch (i) {
+            case 1:
+                this.lineColor1.visible = true
+                this.lineValue1.visible = true
+                this.lineText1.visible = true
+                break
+            case 2:
+                this.lineColor2.visible = true
+                this.lineValue2.visible = true
+                this.lineText2.visible = true
+                break
+            case 3:
+                this.lineColor3.visible = true
+                this.lineValue3.visible = true
+                this.lineText3.visible = true
+                break
+            case 4:
+                this.lineColor4.visible = true
+                this.lineValue4.visible = true
+                this.lineText4.visible = true
+                break
+        }
+    }
 }
 
 /**
@@ -211,18 +321,34 @@ class OpzioniThreshold extends Card{
 export class VisualSettings extends Model {
 
     public stile: ImpostazioniDiStile = new ImpostazioniDiStile();
-    public thres : OpzioniThreshold = new OpzioniThreshold();
+    public thres: OpzioniThreshold = new OpzioniThreshold();
     public colorSelector: ColorazioneAree = new ColorazioneAree();
     public cards: Card[] = [this.stile, this.thres, this.colorSelector];
 
-    public populateColorSelector(data: BoxPlotData[]){
+    public populateThresholdSelector(number_of_lines: number) {
+        let groups = this.thres.groups
+        if (number_of_lines > 0) {
+            for (let i = 0; i < number_of_lines; i++) {
+                let tl = new ThresholdLine()
+                tl.color.displayName = `Colore della linea ${i+1}`
+                tl.value.displayName = `Valore della linea ${i+1}`
+                tl.text.displayName = `Nome della linea ${i+1}`
+                tl.displayName = `Threshold line ${i+1}`
+                tl.name = `Threshold line ${i+1}`
+                tl.index = i
+                groups.push(tl);
+            }
+        }
+    }
+
+    public populateColorSelector(data: BoxPlotData[]) {
         let slices = this.colorSelector.slices;
-        if(data){
-            data.forEach(d=>{
+        if (data) {
+            data.forEach(d => {
                 slices.push(new formattingSettings.ColorPicker({
                     name: "fill",
                     displayName: d.area,
-                    value: {value: d.color},
+                    value: { value: d.color },
                     visible: true,
                     selector: d.selectionId.getSelector()
                 }));
@@ -230,18 +356,20 @@ export class VisualSettings extends Model {
         }
     }
 
-    public populateLineOptions(thresholdLines: ThresholdLines[]){
-        let slices = this.thres.slices;
-        var index=0;
-        thresholdLines.forEach(th=>{
+    /*public populateLineOptions(thresholdLines: ThresholdLines[]) {
+        //let slices = this.thres.slices;
+        let slices = this.thres.groups;
+        debugger;
+        var index = 0;
+        thresholdLines.forEach(th => {
             slices.push(
                 new formattingSettings.ColorPicker({
                     name: "lineColor",
                     displayName: `Colore linea ${th.getValue()}%`,
-                    value: {value: th.getColor()},
+                    value: { value: th.getColor() },
                     visible: true
                 })
             )
         });
-    }
+    }*/
 }

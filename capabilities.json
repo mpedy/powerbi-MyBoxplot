@@ -58,6 +58,16 @@
                     "type": {
                         "numeric": true
                     }
+                },
+                "Show buttons":{
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "Visualizza questionari bianchi":{
+                    "type": {
+                        "bool": true
+                    }
                 }
             }
         },
@@ -77,6 +87,28 @@
         "lineOptions": {
             "displayName": "Line Options",
             "properties": {
+                "color":{
+                    "displayName": "Colore",
+                    "type": {
+                        "fill": {
+                            "solid": {
+                                "color": true
+                            }
+                        }
+                    }
+                },
+                "value":{
+                    "displayName": "Valore",
+                    "type": {
+                        "numeric": true
+                    }
+                },
+                "text":{
+                    "displayName": "Nome",
+                    "type": {
+                        "text": true
+                    }
+                },
                 "lineColor1": {
                     "displayName": "Line Color",
                     "type": {
@@ -91,6 +123,12 @@
                     "displayName": "Line Value",
                     "type": {
                         "numeric": true
+                    }
+                },
+                "lineText1":{
+                    "displayName": "Line Text",
+                    "type": {
+                        "text": true
                     }
                 },
                 "lineColor2": {
@@ -109,6 +147,12 @@
                         "numeric": true
                     }
                 },
+                "lineText2":{
+                    "displayName": "Line Text",
+                    "type": {
+                        "text": true
+                    }
+                },
                 "lineColor3": {
                     "displayName": "Line Color",
                     "type": {
@@ -125,6 +169,12 @@
                         "numeric": true
                     }
                 },
+                "lineText3":{
+                    "displayName": "Line Text",
+                    "type": {
+                        "text": true
+                    }
+                },
                 "lineColor4": {
                     "displayName": "Line Color",
                     "type": {
@@ -139,6 +189,12 @@
                     "displayName": "Line Value",
                     "type": {
                         "numeric": true
+                    }
+                },
+                "lineText4":{
+                    "displayName": "Line Text",
+                    "type": {
+                        "text": true
                     }
                 }
             }

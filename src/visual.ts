@@ -59,7 +59,7 @@ export class Visual implements IVisual {
     private boxPlotData: BoxPlotData[] = [];
     private boxPlotData_dip: BoxPlotData[] = [];
     private boxPlotData_cds: BoxPlotData[] = [];
-    //private questionariBianchi: number = 0;
+    private questionariBianchi: number = 0;
     private questionariCompilati: number = 0;
     private colors = {
         "CONOSCENZE": "#008fd3",
@@ -88,6 +88,7 @@ export class Visual implements IVisual {
     private filter_dip: boolean = false;
     private filter_cds: boolean = false;
     private numberOfIns: number = 0;
+    private dataView: DataView;
 
     constructor(options: VisualConstructorOptions) {
         this.host = options.host;
@@ -145,13 +146,15 @@ export class Visual implements IVisual {
             .style("display", "flex")
             .style("flex-direction", "column")
             .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.questionariCompilati}</h1>Questionari compilati</span>`)
-        /*div.append("div")
-            .style("flex-grow", 1)
-            .style("justify-content", "center")
-            .style("align-items", "center")
-            .style("display", "flex")
-            .style("flex-direction", "column")
-            .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.questionariBianchi}</h1>Questionari bianchi</span>`)*/
+        if (this.visualSettings.stile.show_questionari_bianchi.value == true) {
+            div.append("div")
+                .style("flex-grow", 1)
+                .style("justify-content", "center")
+                .style("align-items", "center")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.questionariBianchi}</h1>Questionari bianchi</span>`)
+        }
     }
 
     private createButtons() {
@@ -167,7 +170,6 @@ export class Visual implements IVisual {
             .text("Tutto")
             .style("position", "relative")
             .style("padding", "4px 10px")
-            .style("display","none")
             //.style("left","40px")
             .on("click", event => {
                 var elem = document.getElementById("btn_tutti");
@@ -193,7 +195,6 @@ export class Visual implements IVisual {
             .style("position", "relative")
             .style("padding", "4px 10px")
             .style("left", min_dist + "px")
-            .style("display","none")
             .on("click", event => {
                 var elem = document.getElementById("btn_solo_cds");
                 if (elem.getAttribute("clicked") == "false") {
@@ -219,7 +220,6 @@ export class Visual implements IVisual {
             .style("position", "relative")
             .style("padding", "4px 10px")
             .style("left", min_dist * 2 + "px")
-            .style("display","none")
             .on("click", event => {
                 var elem = document.getElementById("btn_solo_dip");
                 if (elem.getAttribute("clicked") == "false") {
@@ -243,6 +243,11 @@ export class Visual implements IVisual {
         }
         if (this.filter_dip) {
             this.btn_solo_dip.style("background-color", "#199BFC").style("color", "white").style("font-weight", "bold")
+        }
+        if (this.visualSettings.stile.show_buttons.value == false) {
+            this.btn_all.style("display", "none")
+            this.btn_solo_cds.style("display", "none")
+            this.btn_solo_dip.style("display", "none")
         }
     }
 
@@ -315,7 +320,7 @@ export class Visual implements IVisual {
         this.boxPlotData = [];
         this.boxPlotData_dip = [];
         this.boxPlotData_cds = [];
-        //this.questionariBianchi = 0;
+        this.questionariBianchi = 0;
         this.questionariCompilati = 0;
         let flag_quest_bianchi = false, flag_quest_compilati = false;
         const areas = dataView.categorical.categories[0].values
@@ -329,7 +334,7 @@ export class Visual implements IVisual {
             let datas = dataView.categorical.values.grouped();
             if (datas.length > 1) {
                 if (datas[0].values.length > 1 && !flag_quest_bianchi) {
-                    //this.questionariBianchi = <number>datas.map(data => data.values[1]).map(data => data.values[0])[0]
+                    this.questionariBianchi = <number>datas.map(data => data.values[1]).map(data => data.values[0])[0]
                     flag_quest_bianchi = true
                 }
                 if (datas[0].values.length > 2 && !flag_quest_compilati) {
@@ -403,7 +408,7 @@ export class Visual implements IVisual {
 
         // Aggiungi asse X
         g.append("g")
-            .attr("id","asseX")
+            .attr("id", "asseX")
             .attr("transform", `translate(0,${this.height + this.margin.xAxistop})`)
             .call(d3.axisBottom(this.asseX))
             .selectAll("line").remove();
@@ -414,16 +419,26 @@ export class Visual implements IVisual {
 
         // Aggiungi asse Y
         g.append("g")
-            .attr("id","asseY")
+            .attr("id", "asseY")
             .call(d3.axisLeft(this.asseY))
             //.selectAll("line").remove();
             .selectAll(".tick line").remove()
-        //g.selectAll("path").remove();
+        g.selectAll("path").remove();
+        // asseX = 0
         g.append("line")
             .attr("x1", 0)
             .attr("x2", this.width) // larghezza totale
             .attr("y1", this.asseY(0)) // y=0 trasformato in coordinate SVG
             .attr("y2", this.asseY(0))
+            .attr("stroke", "black")
+            .attr("stroke-width", 1);
+
+        //asseY = 0
+        g.append("line")
+            .attr("x1", this.asseX(data[0].area)-18)
+            .attr("x2", this.asseX(data[0].area)-18)
+            .attr("y1", 0-4)
+            .attr("y2", this.height)
             .attr("stroke", "black")
             .attr("stroke-width", 1);
     }
@@ -456,7 +471,23 @@ export class Visual implements IVisual {
 
     public createThresholdLines(dataView: DataView) {
         this.thresholdLines = [];
-        for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
+        const prop_color : DataViewObjectPropertyIdentifier = {
+            objectName: "lineOptions",
+            propertyName: "color"
+        }
+        const prop_value : DataViewObjectPropertyIdentifier = {
+            objectName: "lineOptions",
+            propertyName: "value"
+        }
+        const prop_text : DataViewObjectPropertyIdentifier = {
+            objectName: "lineOptions",
+            propertyName: "text"
+        }
+        for(let gr of this.visualSettings.thres.groups){
+            let a = dataViewObjects.getValue(gr.index,) TODO
+        }
+
+        /*for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
             var tl = new ThresholdLines();
             const defaultColor: Fill = {
                 solid: {
@@ -475,7 +506,7 @@ export class Visual implements IVisual {
             let color = colorFromObjects?.solid.color ?? defaultColor.solid.color;
             tl.setColor(color);
             this.thresholdLines.push(tl);
-        }
+        }*/
     }
 
     public update(options: VisualUpdateOptions) {
@@ -494,15 +525,18 @@ export class Visual implements IVisual {
 
         // Pulisci tutti gli elementi
         this.svg.selectAll("*").remove()
-        let dataView: DataView = options.dataViews[0];
+        this.dataView = options.dataViews[0];
 
-        this.getDataFromDataview(dataView);
+        this.getDataFromDataview(this.dataView);
         this.visualSettings.populateColorSelector(this.boxPlotData);
+        this.visualSettings.populateThresholdSelector(this.visualSettings.stile.nOfThresholdLines.value);
         if (this.visualSettings.stile.nOfThresholdLines.value > 0) {
             this.visualSettings.thres.visible = true;
             for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
-                this.visualSettings.thres.slices[i * 2].visible = true;
-                this.visualSettings.thres.slices[i * 2 + 1].visible = true;
+                //this.visualSettings.thres.slices[i * 3].visible = true; //colore della linea
+                //this.visualSettings.thres.slices[i * 3 + 1].visible = true; //valore della linea
+                //this.visualSettings.thres.slices[i * 3 + 2].visible = true; //Nome della linea
+                this.visualSettings.thres.activate_line(i+1)
             }
         }
         var data = this.boxPlotData;
@@ -644,9 +678,10 @@ export class Visual implements IVisual {
         // Threshold line 25% e 50%
         //this.aggiungiThreshold(25, { "stroke": "red", "stroke-dasharray": 4 })
         //this.aggiungiThreshold(50, { "stroke": "#cccc00", "stroke-dasharray": 4 })
-        for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
+        /*for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
             this.aggiungiThreshold(this.visualSettings.thres.getValue(i + 1), { "stroke": this.visualSettings.thres.getColor(i + 1).value, "stroke-dasharray": 4 });
-        }
+        }*/
+        this.createThresholdLines(this.dataView)
 
 
         if (this.visualSettings.stile.showLogo.value == true) {
