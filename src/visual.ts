@@ -43,6 +43,7 @@ import { dataViewObjects } from "powerbi-visuals-utils-dataviewutils";
 import DataViewObjectPropertyIdentifier = powerbi.DataViewObjectPropertyIdentifier;
 import Fill = powerbi.Fill;
 import { ThresholdLines } from "./thresholdLines";
+import { descrizioni_asseX, getDescriptionFromTransformedArea } from "./description_label";
 
 type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
 
@@ -391,7 +392,7 @@ export class Visual implements IVisual {
 
         // Crea l'elemento SVG
         this.svg
-            .attr("width", this.width + this.margin.left + this.margin.right + (this.visualSettings.stile.showLogo.value == true? 30 : 0) + (this.visualSettings.stile.show_right_yaxis ? 30 : 0))
+            .attr("width", this.width + this.margin.left + this.margin.right + (this.visualSettings.stile.showLogo.value == true ? 30 : 0) + (this.visualSettings.stile.show_right_yaxis ? 30 : 0))
             .attr("height", this.height + this.margin.top + this.margin.bottom)
 
 
@@ -402,6 +403,8 @@ export class Visual implements IVisual {
             .attr("dy", ".35em")
             .style("font-size", "10")
             .call(this.wrap, this.asseX.bandwidth() * 10)*/
+
+        this.root.append("div").attr("id", "tooltip_assex").style("visibility", "hidden").style("position", "absolute")
 
         let g = this.svg
             .append("g")
@@ -414,6 +417,29 @@ export class Visual implements IVisual {
             .attr("transform", `translate(0,${this.height + this.margin.xAxistop})`)
             .call(d3.axisBottom(this.asseX))
             .selectAll("line").remove();
+        d3.select("#asseX").selectAll("text").call((txt) => {
+            var context: Visual = this
+            txt.each(function () {
+                const text = d3.select(this);
+                const area = text.text()
+                text.style("cursor","pointer")
+                var tooltip = d3.select("#tooltip_assex")
+                text.on("mouseover", function (event) {
+                    tooltip.selectAll("*").remove()
+                    tooltip
+                        .style("visibility", "visible")
+                        .append("div").style("max-width","140px").html(`<span style="background-color: white; padding: 5px; border-radius: 10px; border: 1px solid rgb(33,33,33); color: rgb(33,33,33); font-size: 12px;width: 100%; display: block;">${area} - ${getDescriptionFromTransformedArea(area)}</span>`)
+                }).on("mousemove", function (event) {
+                    console.log(context.width, event.pageX, event.pageY, "MAXWIDTH: ",Math.min(350,(context.svg.attr("width") as unknown as number)-event.pageX-50)+"px")
+                    tooltip
+                        .style("top", (event.pageY - 20) + "px")
+                        .style("left", (event.pageX + 20) + "px")
+                        .select("div").style("max-width",Math.min(350,(context.svg.attr("width") as unknown as number)-event.pageX-50)+"px")
+                }).on("mouseout", function () {
+                    tooltip.style("visibility", "hidden");
+                });
+            })
+        })
         g.selectAll("text") // Seleziona tutte le etichette dell'asse X
             .style("text-anchor", "middle") // Centro il testo
             .attr("dy", ".35em")// Allineamento verticale del testo
@@ -481,8 +507,8 @@ export class Visual implements IVisual {
             group.append("line")
                 .attr("x1", 0)
                 .attr("x2", 30)
-                .attr("y1", this.height+yOffset)
-                .attr("y2", this.height+yOffset)
+                .attr("y1", this.height + yOffset)
+                .attr("y2", this.height + yOffset)
                 .attr("stroke", d[0].value.value)
                 .attr("stroke-width", 2)
                 .attr("stroke-dasharray", 4);
@@ -490,7 +516,7 @@ export class Visual implements IVisual {
             // Testo associato
             group.append("text")
                 .attr("x", 40)
-                .attr("y", this.height+yOffset)
+                .attr("y", this.height + yOffset)
                 .attr("dy", "0.35em")
                 .style("font-size", "10px")
                 .style("font-family", "sans-serif")
@@ -510,34 +536,36 @@ export class Visual implements IVisual {
             line.attr(i, attribs[i])
         }
 
-        let text_dim = this.getTextDimension(lineOfThreshold_attribs[2].value)
+        if (this.visualSettings.stile.show_legend_in_graph.value == true) {
+            let text_dim = this.getTextDimension(lineOfThreshold_attribs[2].value)
 
-        // Sfondo rettangolare dietro al testo
-        let textbox = this.root.select("#svg-container")
-            .append("rect") // inserisci PRIMA del <text>
-            .attr("fill", lineOfThreshold_attribs[0].value.value)
-            .attr("stroke", "black")
-            .attr("stroke-width", 1)
-            .attr("rx", 3) // angoli arrotondati (opzionale)
-            .attr("ry", 3);
-        // aggiungo il nome alla threshold line
-        let text = this.root.select("#svg-container")
-            .append("text")
-            .attr("x", this.width - text_dim[0])
-            .attr("y", this.asseY(lineOfThreshold_attribs[1].value) + text_dim[1])
-            .attr("dy", "0.35em") // per allineare verticalmente al centro della linea
-            .style("font-size", "12px")
-            .style("fill", "black") // stesso colore della linea
-            .text(lineOfThreshold_attribs[2].value); // cambia col tuo testo
+            // Sfondo rettangolare dietro al testo
+            let textbox = this.root.select("#svg-container")
+                .append("rect") // inserisci PRIMA del <text>
+                .attr("fill", lineOfThreshold_attribs[0].value.value)
+                .attr("stroke", "black")
+                .attr("stroke-width", 1)
+                .attr("rx", 3) // angoli arrotondati (opzionale)
+                .attr("ry", 3);
+            // aggiungo il nome alla threshold line
+            let text = this.root.select("#svg-container")
+                .append("text")
+                .attr("x", this.width - text_dim[0])
+                .attr("y", this.asseY(lineOfThreshold_attribs[1].value) + text_dim[1])
+                .attr("dy", "0.35em") // per allineare verticalmente al centro della linea
+                .style("font-size", "12px")
+                .style("fill", "black") // stesso colore della linea
+                .text(lineOfThreshold_attribs[2].value); // cambia col tuo testo
 
 
-        // Ottieni bounding box del testo
-        const bbox = text.node().getBBox();
+            // Ottieni bounding box del testo
+            const bbox = text.node().getBBox();
 
-        textbox.attr("x", bbox.x - 4)
-            .attr("y", bbox.y - 1)
-            .attr("width", bbox.width + 8)
-            .attr("height", bbox.height + 4)
+            textbox.attr("x", bbox.x - 4)
+                .attr("y", bbox.y - 1)
+                .attr("width", bbox.width + 8)
+                .attr("height", bbox.height + 4)
+        }
     }
 
     public getFormattingModel(): FormattingModel {
@@ -550,7 +578,7 @@ export class Visual implements IVisual {
         } else {
             this.margin.right = 100;
         }
-        this.width = this.options.viewport.width - this.margin.left - this.margin.right - ( this.visualSettings.stile.showLogo.value == true ? 20 : 0) - (this.visualSettings.stile.show_right_yaxis.value == true ? 30 : 0);
+        this.width = this.options.viewport.width - this.margin.left - this.margin.right - (this.visualSettings.stile.showLogo.value == true ? 20 : 0) - (this.visualSettings.stile.show_right_yaxis.value == true ? 30 : 0);
         this.height = this.options.viewport.height - this.margin.top - this.margin.bottom;
     }
 
@@ -750,7 +778,9 @@ export class Visual implements IVisual {
         for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
             this.aggiungiThreshold(this.visualSettings.thres.getThresholdLine(i + 1), { "stroke-dasharray": 4 });
         }
-        this.creaLegenda()
+        if (this.visualSettings.stile.show_legend.value == true) {
+            this.creaLegenda()
+        }
         //this.createThresholdLines(this.dataView)
 
 

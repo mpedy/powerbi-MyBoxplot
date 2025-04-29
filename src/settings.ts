@@ -125,10 +125,24 @@ class ImpostazioniDiStile extends Card {
         visible: true
     });
 
+    public show_legend = new formattingSettings.ToggleSwitch({
+        name: "Show legend",
+        displayName: "Visualizza legenda",
+        value: true,
+        visible: true
+    });
+
+    public show_legend_in_graph = new formattingSettings.ToggleSwitch({
+        name: "Show legend in graph",
+        displayName: "Visualizza legenda all'interno del grafico",
+        value: false,
+        visible: true
+    });
+
     public name: string = "stile";
     public displayName: string = "Impostazioni di stile";
     public visible: boolean = true;
-    public slices: Slice[] = [this.boxSize, this.outliersRadius, this.showLogo, this.logoSize, this.nOfThresholdLines, this.show_buttons, this.show_questionari_bianchi, this.show_right_yaxis];
+    public slices: Slice[] = [this.boxSize, this.outliersRadius, this.showLogo, this.logoSize, this.nOfThresholdLines, this.show_buttons, this.show_questionari_bianchi, this.show_right_yaxis, this.show_legend, this.show_legend_in_graph];
 }
 
 class ColorazioneAree extends Card {

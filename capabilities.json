@@ -73,6 +73,16 @@
                     "type": {
                         "bool": true
                     }
+                },
+                "Show legend in graph":{
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "Show legend":{
+                    "type": {
+                        "bool": true
+                    }
                 }
             }
         },
