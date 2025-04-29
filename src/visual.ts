@@ -89,6 +89,7 @@ export class Visual implements IVisual {
     private filter_cds: boolean = false;
     private numberOfIns: number = 0;
     private dataView: DataView;
+    private data: BoxPlotData[];
 
     constructor(options: VisualConstructorOptions) {
         this.host = options.host;
@@ -262,7 +263,7 @@ export class Visual implements IVisual {
         });
     }
 
-    public getTextWidth(text: string, font?: any) {
+    public getTextDimension(text: string, font?: any) {
         // Crea un elemento span temporaneo
         const span = document.createElement("span");
         span.style.visibility = "hidden";
@@ -276,15 +277,16 @@ export class Visual implements IVisual {
         // Aggiungi lo span al documento per misurarne la larghezza
         document.body.appendChild(span);
         const width = span.offsetWidth;
+        const height = span.offsetHeight
 
         // Rimuovi lo span dal DOM
         document.body.removeChild(span);
 
-        return width;
+        return [width, height];
     }
 
     public displayTooltip(event, d) {
-        var secondColumnWidth = d3.max([this.getTextWidth(d.area, undefined) + 5, 110]);
+        var secondColumnWidth = d3.max([this.getTextDimension(d.area, undefined)[0] + 5, 110]);
         this.root.append("div")
             .attr("id", "tooltip")
             .style("background-color", "white")
@@ -389,7 +391,7 @@ export class Visual implements IVisual {
 
         // Crea l'elemento SVG
         this.svg
-            .attr("width", this.width + this.margin.left + this.margin.right)
+            .attr("width", this.width + this.margin.left + this.margin.right + (this.visualSettings.stile.showLogo.value == true? 30 : 0) + (this.visualSettings.stile.show_right_yaxis ? 30 : 0))
             .attr("height", this.height + this.margin.top + this.margin.bottom)
 
 
@@ -417,13 +419,22 @@ export class Visual implements IVisual {
             .attr("dy", ".35em")// Allineamento verticale del testo
             .call(this.wrap, this.asseX.bandwidth()); // Applica la funzione wrap per spezzare il testo
 
-        // Aggiungi asse Y
+        // Aggiungi asse Y a sx
         g.append("g")
-            .attr("id", "asseY")
+            .attr("id", "asseY_sx")
             .call(d3.axisLeft(this.asseY))
             //.selectAll("line").remove();
             .selectAll(".tick line").remove()
         g.selectAll("path").remove();
+        //asseY = 0 a sx
+        g.append("line")
+            .attr("x1", this.asseX(data[0].area) - (this.visualSettings.stile.showLogo.value ? 18 : 19.5))
+            .attr("x2", this.asseX(data[0].area) - (this.visualSettings.stile.showLogo.value ? 18 : 19.5))
+            .attr("y1", 0 - 4)
+            .attr("y2", this.height)
+            .attr("stroke", "black")
+            .attr("stroke-width", 1);
+
         // asseX = 0
         g.append("line")
             .attr("x1", 0)
@@ -433,26 +444,100 @@ export class Visual implements IVisual {
             .attr("stroke", "black")
             .attr("stroke-width", 1);
 
-        //asseY = 0
-        g.append("line")
-            .attr("x1", this.asseX(data[0].area)-18)
-            .attr("x2", this.asseX(data[0].area)-18)
-            .attr("y1", 0-4)
-            .attr("y2", this.height)
-            .attr("stroke", "black")
-            .attr("stroke-width", 1);
+        if (this.visualSettings.stile.show_right_yaxis.value == true) {
+            g.append("g")
+                .attr("id", "asseY_dx")
+                .attr("transform", `translate(${this.width},0)`)
+                .call(d3.axisRight(this.asseY))
+                //.selectAll("line").remove();
+                .selectAll(".tick line").remove()
+
+            //asseY = 0 a dx
+            g.append("line")
+                .attr("x1", this.asseX(data[data.length - 1].area) + this.asseX.bandwidth() + (this.visualSettings.stile.showLogo.value ? 18 : 19.5))
+                .attr("x2", this.asseX(data[data.length - 1].area) + this.asseX.bandwidth() + (this.visualSettings.stile.showLogo.value ? 18 : 19.5))
+                .attr("y1", 0 - 4)
+                .attr("y2", this.height)
+                .attr("stroke", "black")
+                .attr("stroke-width", 1);
+            g.selectAll("path").remove();
+        }
+
     }
 
-    public aggiungiThreshold(percentage, attribs) {
+    public creaLegenda() {
+        const rowHeight = 15
+        const yOffset = 55
+        var legenda = this.root.select("#svg-container")
+            .append("g")
+            .attr("id", "legenda")
+            .attr("x", this.asseX(this.data[0].area))
+            .attr("y", 0 - 30)
+        for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
+            let d = this.visualSettings.thres.getThresholdLine(i + 1)
+            const group = legenda.append("g")
+                .attr("transform", `translate(0, ${i * rowHeight})`);
+            // Linea simbolo
+            group.append("line")
+                .attr("x1", 0)
+                .attr("x2", 30)
+                .attr("y1", this.height+yOffset)
+                .attr("y2", this.height+yOffset)
+                .attr("stroke", d[0].value.value)
+                .attr("stroke-width", 2)
+                .attr("stroke-dasharray", 4);
+
+            // Testo associato
+            group.append("text")
+                .attr("x", 40)
+                .attr("y", this.height+yOffset)
+                .attr("dy", "0.35em")
+                .style("font-size", "10px")
+                .style("font-family", "sans-serif")
+                .text(d[2].value);
+        }
+    }
+
+    public aggiungiThreshold(lineOfThreshold_attribs, attribs) {
         var line = this.root.select("#svg-container")
             .append("line")
             .attr("x1", 0)
             .attr("x2", this.width)
-            .attr("y1", this.asseY(percentage))
-            .attr("y2", this.asseY(percentage))
+            .attr("y1", this.asseY(lineOfThreshold_attribs[1].value))
+            .attr("y2", this.asseY(lineOfThreshold_attribs[1].value))
+            .attr("stroke", lineOfThreshold_attribs[0].value.value)
         for (var i of Object.keys(attribs)) {
             line.attr(i, attribs[i])
         }
+
+        let text_dim = this.getTextDimension(lineOfThreshold_attribs[2].value)
+
+        // Sfondo rettangolare dietro al testo
+        let textbox = this.root.select("#svg-container")
+            .append("rect") // inserisci PRIMA del <text>
+            .attr("fill", lineOfThreshold_attribs[0].value.value)
+            .attr("stroke", "black")
+            .attr("stroke-width", 1)
+            .attr("rx", 3) // angoli arrotondati (opzionale)
+            .attr("ry", 3);
+        // aggiungo il nome alla threshold line
+        let text = this.root.select("#svg-container")
+            .append("text")
+            .attr("x", this.width - text_dim[0])
+            .attr("y", this.asseY(lineOfThreshold_attribs[1].value) + text_dim[1])
+            .attr("dy", "0.35em") // per allineare verticalmente al centro della linea
+            .style("font-size", "12px")
+            .style("fill", "black") // stesso colore della linea
+            .text(lineOfThreshold_attribs[2].value); // cambia col tuo testo
+
+
+        // Ottieni bounding box del testo
+        const bbox = text.node().getBBox();
+
+        textbox.attr("x", bbox.x - 4)
+            .attr("y", bbox.y - 1)
+            .attr("width", bbox.width + 8)
+            .attr("height", bbox.height + 4)
     }
 
     public getFormattingModel(): FormattingModel {
@@ -465,29 +550,13 @@ export class Visual implements IVisual {
         } else {
             this.margin.right = 100;
         }
-        this.width = this.options.viewport.width - this.margin.left - this.margin.right;
+        this.width = this.options.viewport.width - this.margin.left - this.margin.right - ( this.visualSettings.stile.showLogo.value == true ? 20 : 0) - (this.visualSettings.stile.show_right_yaxis.value == true ? 30 : 0);
         this.height = this.options.viewport.height - this.margin.top - this.margin.bottom;
     }
 
     public createThresholdLines(dataView: DataView) {
         this.thresholdLines = [];
-        const prop_color : DataViewObjectPropertyIdentifier = {
-            objectName: "lineOptions",
-            propertyName: "color"
-        }
-        const prop_value : DataViewObjectPropertyIdentifier = {
-            objectName: "lineOptions",
-            propertyName: "value"
-        }
-        const prop_text : DataViewObjectPropertyIdentifier = {
-            objectName: "lineOptions",
-            propertyName: "text"
-        }
-        for(let gr of this.visualSettings.thres.groups){
-            let a = dataViewObjects.getValue(gr.index,) TODO
-        }
-
-        /*for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
+        for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
             var tl = new ThresholdLines();
             const defaultColor: Fill = {
                 solid: {
@@ -506,7 +575,7 @@ export class Visual implements IVisual {
             let color = colorFromObjects?.solid.color ?? defaultColor.solid.color;
             tl.setColor(color);
             this.thresholdLines.push(tl);
-        }*/
+        }
     }
 
     public update(options: VisualUpdateOptions) {
@@ -529,25 +598,25 @@ export class Visual implements IVisual {
 
         this.getDataFromDataview(this.dataView);
         this.visualSettings.populateColorSelector(this.boxPlotData);
-        this.visualSettings.populateThresholdSelector(this.visualSettings.stile.nOfThresholdLines.value);
+        //this.visualSettings.populateThresholdSelector(this.visualSettings.stile.nOfThresholdLines.value);
         if (this.visualSettings.stile.nOfThresholdLines.value > 0) {
             this.visualSettings.thres.visible = true;
             for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
                 //this.visualSettings.thres.slices[i * 3].visible = true; //colore della linea
                 //this.visualSettings.thres.slices[i * 3 + 1].visible = true; //valore della linea
                 //this.visualSettings.thres.slices[i * 3 + 2].visible = true; //Nome della linea
-                this.visualSettings.thres.activate_line(i+1)
+                this.visualSettings.thres.activate_line(i + 1)
             }
         }
-        var data = this.boxPlotData;
+        this.data = this.boxPlotData;
         if (this.filter_all) {
-            data = this.boxPlotData;
+            this.data = this.boxPlotData;
         } else if (this.filter_cds) {
-            data = this.boxPlotData_cds;
+            this.data = this.boxPlotData_cds;
         } else if (this.filter_dip) {
-            data = this.boxPlotData_dip;
+            this.data = this.boxPlotData_dip;
         }
-        this.numberOfIns = data[0].values.length
+        this.numberOfIns = this.data[0].values.length
 
         // Crea bottoni di scelta
         this.createButtons();
@@ -556,11 +625,11 @@ export class Visual implements IVisual {
         this.createTextbox();
 
         // Creazione degli assi
-        this.creaAssi(data)
+        this.creaAssi(this.data)
 
         // Disegna il boxplot per ciascuna area delle domande
         const activeSelections = this.selectionManager.getSelectionIds();
-        data.forEach(d => {
+        this.data.forEach(d => {
             //console.log(d)
             let g1 = this.root.select("#svg-container").append("g");
             g1.attr("class", d.area)
@@ -678,17 +747,18 @@ export class Visual implements IVisual {
         // Threshold line 25% e 50%
         //this.aggiungiThreshold(25, { "stroke": "red", "stroke-dasharray": 4 })
         //this.aggiungiThreshold(50, { "stroke": "#cccc00", "stroke-dasharray": 4 })
-        /*for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
-            this.aggiungiThreshold(this.visualSettings.thres.getValue(i + 1), { "stroke": this.visualSettings.thres.getColor(i + 1).value, "stroke-dasharray": 4 });
-        }*/
-        this.createThresholdLines(this.dataView)
+        for (var i = 0; i < this.visualSettings.stile.nOfThresholdLines.value; i++) {
+            this.aggiungiThreshold(this.visualSettings.thres.getThresholdLine(i + 1), { "stroke-dasharray": 4 });
+        }
+        this.creaLegenda()
+        //this.createThresholdLines(this.dataView)
 
 
         if (this.visualSettings.stile.showLogo.value == true) {
             this.svg
                 .append("image")
                 .attr("xlink:href", "data:image/png;base64," + image)
-                .attr("x", this.width - 70)  // Posizione X dell'immagine
+                .attr("x", this.width - 70 + 30)  // Posizione X dell'immagine
                 .attr("y", 0)  // Posizione Y dell'immagine
                 .attr("width", this.visualSettings.stile.logoSize.value ? this.visualSettings.stile.logoSize.value : 300)  // Larghezza dell'immagine
                 .attr("height", this.visualSettings.stile.logoSize.value ? this.visualSettings.stile.logoSize.value / 4 : 75);  // Altezza dell'immagine

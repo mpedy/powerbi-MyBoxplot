@@ -68,6 +68,11 @@
                     "type": {
                         "bool": true
                     }
+                },
+                "Show right yaxis":{
+                    "type": {
+                        "bool": true
+                    }
                 }
             }
         },
