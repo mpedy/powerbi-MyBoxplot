@@ -43,7 +43,8 @@ import { dataViewObjects } from "powerbi-visuals-utils-dataviewutils";
 import DataViewObjectPropertyIdentifier = powerbi.DataViewObjectPropertyIdentifier;
 import Fill = powerbi.Fill;
 import { ThresholdLines } from "./thresholdLines";
-import { descrizioni_asseX, getDescriptionFromTransformedArea } from "./description_label";
+import { getDescriptionFromTransformedArea } from "./description_label";
+import { info } from "./info_icon"
 
 type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
 
@@ -403,8 +404,9 @@ export class Visual implements IVisual {
             .attr("dy", ".35em")
             .style("font-size", "10")
             .call(this.wrap, this.asseX.bandwidth() * 10)*/
-
-        this.root.append("div").attr("id", "tooltip_assex").style("visibility", "hidden").style("position", "absolute")
+        if (d3.selectAll("#tooltip_assex").size() == 0) {
+            this.root.append("div").attr("id", "tooltip_assex").style("visibility", "hidden").style("position", "absolute")
+        }
 
         let g = this.svg
             .append("g")
@@ -417,29 +419,30 @@ export class Visual implements IVisual {
             .attr("transform", `translate(0,${this.height + this.margin.xAxistop})`)
             .call(d3.axisBottom(this.asseX))
             .selectAll("line").remove();
-        d3.select("#asseX").selectAll("text").call((txt) => {
+        d3.select("#asseX").selectAll("g").call((txt) => {
             var context: Visual = this
             txt.each(function () {
                 const text = d3.select(this);
                 const area = text.text()
-                text.style("cursor","pointer")
+                text.style("cursor", "pointer")
                 var tooltip = d3.select("#tooltip_assex")
                 text.on("mouseover", function (event) {
                     tooltip.selectAll("*").remove()
                     tooltip
                         .style("visibility", "visible")
-                        .append("div").style("max-width","140px").html(`<span style="background-color: white; padding: 5px; border-radius: 10px; border: 1px solid rgb(33,33,33); color: rgb(33,33,33); font-size: 12px;width: 100%; display: block;">${area} - ${getDescriptionFromTransformedArea(area)}</span>`)
+                        .append("div").style("max-width", "140px").html(`<span style="background-color: white; padding: 5px; border-radius: 10px; border: 1px solid rgb(33,33,33); color: rgb(33,33,33); font-size: 12px;width: 100%; display: block;">${getDescriptionFromTransformedArea(area)}</span>`)
                 }).on("mousemove", function (event) {
-                    console.log(context.width, event.pageX, event.pageY, "MAXWIDTH: ",Math.min(350,(context.svg.attr("width") as unknown as number)-event.pageX-50)+"px")
+                    console.log(context.width, event.pageX, event.pageY, "MAXWIDTH: ", Math.min(350, (context.svg.attr("width") as unknown as number) - event.pageX - 50) + "px")
                     tooltip
                         .style("top", (event.pageY - 20) + "px")
                         .style("left", (event.pageX + 20) + "px")
-                        .select("div").style("max-width",Math.min(350,(context.svg.attr("width") as unknown as number)-event.pageX-50)+"px")
+                        .select("div").style("max-width", Math.min(350, (context.svg.attr("width") as unknown as number) - event.pageX - 50) + "px")
                 }).on("mouseout", function () {
                     tooltip.style("visibility", "hidden");
                 });
             })
         })
+
         g.selectAll("text") // Seleziona tutte le etichette dell'asse X
             .style("text-anchor", "middle") // Centro il testo
             .attr("dy", ".35em")// Allineamento verticale del testo
@@ -488,6 +491,19 @@ export class Visual implements IVisual {
                 .attr("stroke-width", 1);
             g.selectAll("path").remove();
         }
+        var context = this
+        d3.select("#asseX").selectAll("g").each(function(){
+            var gs = d3.select(this)
+            const bbox = (gs.select("text").node() as SVGTextElement).getBBox();
+            const boundingClinetBox = (gs.select("text").node() as SVGTextElement).getBoundingClientRect();
+            context.getTextDimension(gs.select("text").text())
+            console.log(bbox, boundingClinetBox, gs.text())
+            gs.append("path")
+                .attr("d", "M256 48a208 208 0 1 1 0 416 208 208 0 1 1 0-416zm0 464A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336c-13.3 0-24 10.7-24 24s10.7 24 24 24l80 0c13.3 0 24-10.7 24-24s-10.7-24-24-24l-8 0 0-88c0-13.3-10.7-24-24-24l-48 0c-13.3 0-24 10.7-24 24s10.7 24 24 24l24 0 0 64-24 0zm40-144a32 32 0 1 0 0-64 32 32 0 1 0 0 64z")
+                .style("fill", "rgb(33,33,33)")
+                .style("transform", `translate(${bbox.width/2+2}px,${bbox.height*0}px) scale(${8 / 512})`)
+
+        })
 
     }
 
@@ -797,9 +813,11 @@ export class Visual implements IVisual {
 
     // Funzione per spezzare le etichette troppo lunghe
     private wrap(text, width) {
+        debugger;
         text.each(function () {
             const text = d3.select(this);
             const words = text.text().split(/\s+/).reverse(); // Divide l'etichetta in parole
+            debugger;
             const manyword = words.length;
             let word;
             let line: string[] = [];
