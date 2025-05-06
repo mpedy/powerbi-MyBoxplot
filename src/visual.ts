@@ -92,6 +92,7 @@ export class Visual implements IVisual {
     private numberOfIns: number = 0;
     private dataView: DataView;
     private data: BoxPlotData[];
+    private showALL: boolean = true
 
     constructor(options: VisualConstructorOptions) {
         this.host = options.host;
@@ -123,8 +124,8 @@ export class Visual implements IVisual {
                 font-family: 'Fira Sans', sans-serif;
             }
         `);
-        this.buttonContainer = this.root.append("div");
-        this.svg = d3.select(options.element).append('svg');
+        this.buttonContainer = this.root.append("div").attr("id","buttonContainer");
+        this.svg = d3.select(options.element).append('svg').attr("id","svg");
         this.selectionManager = this.host.createSelectionManager();
         this.handleContextMenu();
         //this.tooltipServiceWrapper = createTooltipServiceWrapper(this.host.tooltipService, options.element);
@@ -158,6 +159,14 @@ export class Visual implements IVisual {
                 .style("flex-direction", "column")
                 .html(`<span style="text-align: center"><h1 style="margin: 10px 0px;">${this.questionariBianchi}</h1>Questionari bianchi</span>`)
         }
+        //Per l'errore
+        this.appendButtonContainerError()
+    }
+
+    public appendButtonContainerError(){
+        this.buttonContainer.append("div")
+            .attr("class","diverror")
+            .html("<h1>Si prega di selezionare un solo corso di studio per la visualizzazione del report</h1>")
     }
 
     private createButtons() {
@@ -329,13 +338,19 @@ export class Visual implements IVisual {
         let flag_quest_bianchi = false, flag_quest_compilati = false;
         const areas = dataView.categorical.categories[0].values
         var indexArea = 0;
+        let ccorso = dataView.categorical.values.filter(i => i.source.queryName.indexOf("CodiceCorso") >= 0)
+        var CodiciCorso = ccorso.map(a => a.values.filter((val,i,arr) => arr.indexOf(val)==i)[0]).filter((val,i,arr)=> arr.indexOf(val)==i)
+        this.showALL = CodiciCorso.length==1
+        if(!this.showALL){
+            return false
+        }
+        let datas = dataView.categorical.values.grouped();
         for (var indexArea = 0; indexArea < areas.length; indexArea++) {
             const area = <string>areas[indexArea];
             let color = this.getColorFromObject(area, dataView, indexArea);
             const categorySelectionId = this.host.createSelectionIdBuilder()
                 .withCategory(dataView.categorical.categories[0], indexArea) // Una sola categoria ("Area Domanda")
                 .createSelectionId();
-            let datas = dataView.categorical.values.grouped();
             if (datas.length > 1) {
                 if (datas[0].values.length > 1 && !flag_quest_bianchi) {
                     this.questionariBianchi = <number>datas.map(data => data.values[1]).map(data => data.values[0])[0]
@@ -356,7 +371,9 @@ export class Visual implements IVisual {
             const values_cds = <number[]>datas1.filter(child => (<string>child.source.groupName).split("_")[1] == "SI").map(child => <number>child.values[indexArea] * 100);
             const data_cds = calculateBoxPlotData(values_cds, area, categorySelectionId, color);
             this.boxPlotData_cds.push(data_cds)
+
         }
+        return true
     }
 
     public getColorFromObject(area: string, dataView: powerbi.DataView, indexArea: number) {
@@ -492,7 +509,7 @@ export class Visual implements IVisual {
             g.selectAll("path").remove();
         }
         var context = this
-        d3.select("#asseX").selectAll("g").each(function(){
+        d3.select("#asseX").selectAll("g").each(function () {
             var gs = d3.select(this)
             const bbox = (gs.select("text").node() as SVGTextElement).getBBox();
             const boundingClinetBox = (gs.select("text").node() as SVGTextElement).getBoundingClientRect();
@@ -501,7 +518,7 @@ export class Visual implements IVisual {
             gs.append("path")
                 .attr("d", "M256 48a208 208 0 1 1 0 416 208 208 0 1 1 0-416zm0 464A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336c-13.3 0-24 10.7-24 24s10.7 24 24 24l80 0c13.3 0 24-10.7 24-24s-10.7-24-24-24l-8 0 0-88c0-13.3-10.7-24-24-24l-48 0c-13.3 0-24 10.7-24 24s10.7 24 24 24l24 0 0 64-24 0zm40-144a32 32 0 1 0 0-64 32 32 0 1 0 0 64z")
                 .style("fill", "rgb(33,33,33)")
-                .style("transform", `translate(${bbox.width/2+2}px,${bbox.height*0}px) scale(${8 / 512})`)
+                .style("transform", `translate(${bbox.width / 2 + 2}px,${bbox.height * 0}px) scale(${8 / 512})`)
 
         })
 
@@ -640,7 +657,12 @@ export class Visual implements IVisual {
         this.svg.selectAll("*").remove()
         this.dataView = options.dataViews[0];
 
-        this.getDataFromDataview(this.dataView);
+        if (!this.getDataFromDataview(this.dataView)) {
+            this.showError()
+            return
+        }
+        this.svg.each(function(l){this.classList.remove("error")})
+        this.buttonContainer.each(function(l){this.classList.remove("error")})
         this.visualSettings.populateColorSelector(this.boxPlotData);
         //this.visualSettings.populateThresholdSelector(this.visualSettings.stile.nOfThresholdLines.value);
         if (this.visualSettings.stile.nOfThresholdLines.value > 0) {
@@ -811,13 +833,18 @@ export class Visual implements IVisual {
         }
     }
 
+    public showError(){
+        this.buttonContainer.selectAll("*").remove()
+        this.appendButtonContainerError()
+        this.svg.each(function(l){if(!this.classList.contains("error")) this.classList.toggle("error")})
+        this.buttonContainer.each(function(l){if(!this.classList.contains("error")) this.classList.toggle("error")})
+    }
+
     // Funzione per spezzare le etichette troppo lunghe
     private wrap(text, width) {
-        debugger;
         text.each(function () {
             const text = d3.select(this);
             const words = text.text().split(/\s+/).reverse(); // Divide l'etichetta in parole
-            debugger;
             const manyword = words.length;
             let word;
             let line: string[] = [];

@@ -28,6 +28,11 @@
             "name": "Questionari compilati",
             "displayName": "Questionari compilati",
             "kind": "Measure"
+        },
+        {
+            "name": "Condizione di visualizzazione",
+            "displayName": "Condizione di visualizzazione",
+            "kind": "Measure"
         }
     ],
     "supportsHighlight": true,
@@ -59,27 +64,27 @@
                         "numeric": true
                     }
                 },
-                "Show buttons":{
+                "Show buttons": {
                     "type": {
                         "bool": true
                     }
                 },
-                "Visualizza questionari bianchi":{
+                "Visualizza questionari bianchi": {
                     "type": {
                         "bool": true
                     }
                 },
-                "Show right yaxis":{
+                "Show right yaxis": {
                     "type": {
                         "bool": true
                     }
                 },
-                "Show legend in graph":{
+                "Show legend in graph": {
                     "type": {
                         "bool": true
                     }
                 },
-                "Show legend":{
+                "Show legend": {
                     "type": {
                         "bool": true
                     }
@@ -102,7 +107,7 @@
         "lineOptions": {
             "displayName": "Line Options",
             "properties": {
-                "color":{
+                "color": {
                     "displayName": "Colore",
                     "type": {
                         "fill": {
@@ -112,13 +117,13 @@
                         }
                     }
                 },
-                "value":{
+                "value": {
                     "displayName": "Valore",
                     "type": {
                         "numeric": true
                     }
                 },
-                "text":{
+                "text": {
                     "displayName": "Nome",
                     "type": {
                         "text": true
@@ -140,7 +145,7 @@
                         "numeric": true
                     }
                 },
-                "lineText1":{
+                "lineText1": {
                     "displayName": "Line Text",
                     "type": {
                         "text": true
@@ -162,7 +167,7 @@
                         "numeric": true
                     }
                 },
-                "lineText2":{
+                "lineText2": {
                     "displayName": "Line Text",
                     "type": {
                         "text": true
@@ -184,7 +189,7 @@
                         "numeric": true
                     }
                 },
-                "lineText3":{
+                "lineText3": {
                     "displayName": "Line Text",
                     "type": {
                         "text": true
@@ -206,7 +211,7 @@
                         "numeric": true
                     }
                 },
-                "lineText4":{
+                "lineText4": {
                     "displayName": "Line Text",
                     "type": {
                         "text": true
@@ -247,6 +252,9 @@
                             },
                             {
                                 "for": {"in": "Questionari compilati"}
+                            },
+                            {
+                                "for": {"in": "Condizione di visualizzazione"}
                             }
                         ]
                     }

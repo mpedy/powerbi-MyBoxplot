@@ -31,3 +31,24 @@ button {
 button[clicked='true']{
     border: 2px solid black;
 }
+.diverror{
+    display: none;
+}
+
+.error>div:not(.diverror){
+    display: none !important;
+}
+.error>div.diverror{
+    display: flex;
+}
+svg.error{
+    display: none;
+}
+
+div#buttonContainer.error{
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #ff0000;
+}
